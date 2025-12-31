@@ -1,0 +1,158 @@
+distributed-scheduler/
+│
+├── README.md
+├── DESIGN.md
+├── ARCHITECTURE.md
+├── CMakeLists.txt
+├── .clang-format
+├── .gitignore
+│
+├── docs/
+│   ├── failure-model.md
+│   ├── scheduling-policies.md
+│   ├── persistence.md
+│   └── benchmarking.md
+│
+├── proto/                      # RPC definitions (if using gRPC)
+│   └── scheduler.proto
+│
+├── src/
+│   ├── common/
+│   │   ├── status.h
+│   │   ├── time.h
+│   │   ├── uuid.h
+│   │   └── logging.h
+│   │
+│   ├── scheduler/
+│   │   ├── scheduler.h
+│   │   ├── scheduler.cc
+│   │   ├── task_queue.h
+│   │   ├── task_queue.cc
+│   │   ├── task.h
+│   │   ├── task.cc
+│   │   ├── worker_registry.h
+│   │   ├── worker_registry.cc
+│   │   ├── heartbeat_monitor.h
+│   │   └── heartbeat_monitor.cc
+│   │
+│   ├── worker/
+│   │   ├── worker.h
+│   │   ├── worker.cc
+│   │   ├── executor.h
+│   │   ├── executor.cc
+│   │   └── task_runner.cc
+│   │
+│   ├── rpc/
+│   │   ├── scheduler_service.h
+│   │   ├── scheduler_service.cc
+│   │   ├── worker_service.h
+│   │   └── worker_service.cc
+│   │
+│   ├── storage/
+│   │   ├── storage.h
+│   │   ├── sqlite_storage.cc
+│   │   └── migrations.sql
+│   │
+│   ├── config/
+│   │   ├── config.h
+│   │   └── config.cc
+│   │
+│   └── main.cc                 # entry point
+│
+├── tests/
+│   ├── scheduler_test.cc
+│   ├── task_queue_test.cc
+│   ├── heartbeat_test.cc
+│   ├── storage_test.cc
+│   └── stress_test.cc
+│
+├── scripts/
+│   ├── run_local_cluster.sh
+│   ├── chaos_test.sh
+│   └── benchmark.sh
+│
+├── third_party/
+│   └── sqlite/
+│
+└── tools/
+    ├── load_generator.cc
+    └── failure_injector.cc
+distributed-scheduler/
+│
+├── README.md
+├── DESIGN.md
+├── ARCHITECTURE.md
+├── CMakeLists.txt
+├── .clang-format
+├── .gitignore
+│
+├── docs/
+│   ├── failure-model.md
+│   ├── scheduling-policies.md
+│   ├── persistence.md
+│   └── benchmarking.md
+│
+├── proto/                      # RPC definitions (if using gRPC)
+│   └── scheduler.proto
+│
+├── src/
+│   ├── common/
+│   │   ├── status.h
+│   │   ├── time.h
+│   │   ├── uuid.h
+│   │   └── logging.h
+│   │
+│   ├── scheduler/
+│   │   ├── scheduler.h
+│   │   ├── scheduler.cc
+│   │   ├── task_queue.h
+│   │   ├── task_queue.cc
+│   │   ├── task.h
+│   │   ├── task.cc
+│   │   ├── worker_registry.h
+│   │   ├── worker_registry.cc
+│   │   ├── heartbeat_monitor.h
+│   │   └── heartbeat_monitor.cc
+│   │
+│   ├── worker/
+│   │   ├── worker.h
+│   │   ├── worker.cc
+│   │   ├── executor.h
+│   │   ├── executor.cc
+│   │   └── task_runner.cc
+│   │
+│   ├── rpc/
+│   │   ├── scheduler_service.h
+│   │   ├── scheduler_service.cc
+│   │   ├── worker_service.h
+│   │   └── worker_service.cc
+│   │
+│   ├── storage/
+│   │   ├── storage.h
+│   │   ├── sqlite_storage.cc
+│   │   └── migrations.sql
+│   │
+│   ├── config/
+│   │   ├── config.h
+│   │   └── config.cc
+│   │
+│   └── main.cc                 # entry point
+│
+├── tests/
+│   ├── scheduler_test.cc
+│   ├── task_queue_test.cc
+│   ├── heartbeat_test.cc
+│   ├── storage_test.cc
+│   └── stress_test.cc
+│
+├── scripts/
+│   ├── run_local_cluster.sh
+│   ├── chaos_test.sh
+│   └── benchmark.sh
+│
+├── third_party/
+│   └── sqlite/
+│
+└── tools/
+    ├── load_generator.cc
+    └── failure_injector.cc
