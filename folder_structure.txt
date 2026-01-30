@@ -1,0 +1,164 @@
+cache-server/
+│
+├── README.md
+├── DESIGN.md
+├── ARCHITECTURE.md
+├── ROADMAP.md              # v1 → v3 evolution (very important)
+├── CMakeLists.txt
+├── .clang-format
+├── .gitignore
+│
+├── config/
+│   ├── config.h
+│   ├── config.cc
+│   ├── default.yaml
+│   └── tuning.yaml         # perf / memory tuning
+│
+├── include/
+│   ├── common/
+│   │   ├── status.h
+│   │   ├── error.h
+│   │   ├── time.h
+│   │   ├── utils.h
+│   │   ├── logging.h
+│   │   ├── thread_safe.h
+│   │   └── macros.h
+│   │
+│   ├── net/
+│   │   ├── tcp_server.h
+│   │   ├── epoll_loop.h
+│   │   ├── connection.h
+│   │   ├── buffer.h
+│   │   └── protocol.h
+│   │
+│   ├── thread/
+│   │   ├── thread_pool.h
+│   │   ├── task_queue.h
+│   │   ├── task.h
+│   │   └── worker.h
+│   │
+│   ├── cache/
+│   │   ├── cache_engine.h
+│   │   ├── kv_store.h
+│   │   ├── entry.h
+│   │   ├── eviction_policy.h
+│   │   ├── lru.h
+│   │   ├── ttl_manager.h
+│   │   ├── shard.h
+│   │   └── shard_manager.h
+│   │
+│   ├── concurrency/
+│   │   ├── rw_lock.h
+│   │   ├── striped_lock.h
+│   │   ├── lock_free_queue.h
+│   │   └── rcu.h              # optional advanced
+│   │
+│   ├── memory/
+│   │   ├── slab_allocator.h
+│   │   ├── object_pool.h
+│   │   └── memory_tracker.h
+│   │
+│   ├── rate_limit/
+│   │   ├── token_bucket.h
+│   │   └── rate_limiter.h
+│   │
+│   ├── metrics/
+│   │   ├── metrics.h
+│   │   ├── histogram.h
+│   │   ├── stats_command.h
+│   │   └── prometheus_exporter.h
+│   │
+│   ├── persistence/
+│   │   ├── snapshotter.h
+│   │   ├── wal.h
+│   │   ├── recovery.h
+│   │   └── serializer.h
+│   │
+│   ├── replication/
+│   │   ├── replica_manager.h
+│   │   ├── replication_log.h
+│   │   └── sync_protocol.h
+│   │
+│   ├── sharding/
+│   │   ├── consistent_hash.h
+│   │   ├── hash_ring.h
+│   │   ├── virtual_node.h
+│   │   └── rebalancer.h
+│   │
+│   ├── cluster/
+│   │   ├── node.h
+│   │   ├── membership.h
+│   │   ├── gossip.h
+│   │   └── failure_detector.h
+│   │
+│   ├── admin/
+│   │   ├── admin_server.h
+│   │   ├── command_handler.h
+│   │   └── cli_commands.h
+│   │
+│   └── server/
+│       ├── server.h
+│       ├── lifecycle.h
+│       └── graceful_shutdown.h
+│
+├── src/
+│   ├── common/
+│   ├── net/
+│   ├── thread/
+│   ├── cache/
+│   ├── concurrency/
+│   ├── memory/
+│   ├── rate_limit/
+│   ├── metrics/
+│   ├── persistence/
+│   ├── replication/
+│   ├── sharding/
+│   ├── cluster/
+│   ├── admin/
+│   ├── server/
+│   └── main.cc
+│
+├── tests/
+│   ├── unit/
+│   │   ├── kv_store_test.cc
+│   │   ├── lru_test.cc
+│   │   ├── ttl_test.cc
+│   │   ├── shard_test.cc
+│   │   └── allocator_test.cc
+│   │
+│   ├── integration/
+│   │   ├── persistence_test.cc
+│   │   ├── replication_test.cc
+│   │   └── recovery_test.cc
+│   │
+│   └── stress/
+│       ├── concurrency_stress.cc
+│       ├── memory_stress.cc
+│       └── chaos_test.cc
+│
+├── tools/
+│   ├── client_cli.cc
+│   ├── load_generator.cc
+│   ├── benchmark.cc
+│   ├── fault_injector.cc
+│   └── profiler.cc
+│
+├── scripts/
+│   ├── run_server.sh
+│   ├── run_cluster.sh
+│   ├── chaos_test.sh
+│   └── perf_test.sh
+│
+├── docs/
+│   ├── threading-model.md
+│   ├── locking-strategy.md
+│   ├── memory-management.md
+│   ├── failure-model.md
+│   ├── persistence.md
+│   ├── replication.md
+│   └── benchmarking.md
+│
+└── data/
+    ├── snapshots/
+    ├── wal/
+    └── logs/

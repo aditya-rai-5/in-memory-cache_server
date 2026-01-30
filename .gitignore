@@ -1,0 +1,20 @@
+/docs
+/learning
+/venv
+# Compiled object files
+*.o
+/bin
+/build
+/dist
+# Executables
+main
+redis_like
+
+# Logs
+/logs
+
+# IDE and build artifacts
+.DS_Store
+*.swp
+*.swo
+*~
