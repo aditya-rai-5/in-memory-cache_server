@@ -21,7 +21,9 @@ BIN_DIR      := bin
 
 SRCS := \
 	main.cpp \
-	$(SRC_DIR)/common/logger.cpp
+	$(SRC_DIR)/common/logger.cpp \
+	$(SRC_DIR)/net/accepter.cpp \
+	$(SRC_DIR)/net/socket.cpp
 
 # ===============================
 # Objects
