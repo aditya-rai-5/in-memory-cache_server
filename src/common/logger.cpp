@@ -45,11 +45,6 @@ namespace logging
           max_queue_size_ = max_queue_size;
           queue_policy_ = policy;
 
-          file_.open(base_path_, std::ios::app);
-          running_ = true;
-          worker_ = std::thread(&Logger::worker_loop, this);
-          initialized_ = true;
-
           fd_ = ::open(base_path_.c_str(),
                        O_CREAT | O_WRONLY | O_APPEND,
                        0644);
@@ -60,6 +55,14 @@ namespace logging
           }
 
           file_.open(base_path_, std::ios::app);
+          if (!file_)
+          {
+               throw std::runtime_error("Failed to open log file");
+          }
+
+          running_ = true;
+          worker_ = std::thread(&Logger::worker_loop, this);
+          initialized_ = true;
      }
 
      void Logger::shutdown()
@@ -147,23 +150,26 @@ namespace logging
      {
           while (true)
           {
-               std::unique_lock<std::mutex> lock(mutex_);
-               cv_.wait(lock, [&]
-                        { return !queue_.empty() || !running_; });
-
-               while (!queue_.empty())
+               std::queue<logMessage> local;
                {
-                    auto msg = std::move(queue_.front());
-                    queue_.pop();
+                    std::unique_lock<std::mutex> lock(mutex_);
+                    cv_.wait(lock, [&]
+                             { return !queue_.empty() || !running_; });
+
+                    if (!running_ && queue_.empty())
+                    {
+                         break;
+                    }
+                    local.swap(queue_);
+               }
+
+               while (!local.empty())
+               {
+                    auto msg = std::move(local.front());
+                    local.pop();
 
                     rotate_if_needed();
-
                     file_ << msg.json << '\n';
-
-                    // if (file_)
-                    // {
-                    //      file_ << msg.text;
-                    // }
 
                     if (msg.level >= LogLevel::WARN)
                     {
@@ -173,10 +179,6 @@ namespace logging
                     {
                          std::cout << msg.json;
                     }
-               }
-               if (!running_)
-               {
-                    break;
                }
           }
      }

@@ -1,19 +1,49 @@
-#include "include/common/logger.h"
+#include "include/net/accepter.h"
+#include <sys/socket.h>
+#include <unistd.h>
+#include <cerrno>
+#include <iostream>
+#include <chrono>
+#include <thread>
 
 int main()
 {
-    logging::Logger::instance().init(
-        "logs/server.log",
-        logging::LogLevel::DEBUG,
-        10 * 1024 * 1024,
-        3,
-        8192,
-        logging::QueuePolicy::BLOCK);
+    try
+    {
+        Acceptor acceptor(9000);
 
-    LOG_INFO("Server starting");
-    LOG_DEBUG("Listening on port 6379");
-    LOG_WARN("High memory usage");
-    LOG_ERROR("Connection failed");
+        while (true)
+        {
+            sockaddr_in client{};
+            socklen_t len = sizeof(client);
 
-    return 0;
+            int client_fd = ::accept4(
+                acceptor.fd(),
+                (sockaddr *)&client,
+                &len,
+                SOCK_NONBLOCK);
+
+            if (client_fd < 0)
+            {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    continue;
+                }
+                if (errno == EINTR)
+                {
+                    continue;
+                }
+                throw std::runtime_error("accept4() failed");
+            }
+
+            std::cout << "Accepted fd=" << client_fd << "\n";
+            ::close(client_fd);
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "fatal: " << e.what() << "\n";
+        return 1;
+    }
 }
