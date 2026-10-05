@@ -19,3 +19,4 @@ redis_like
 *.swo
 *~
 folder_structure.md
+.aider*
