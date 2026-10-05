@@ -29,7 +29,9 @@ SRCS := \
 	$(SRC_DIR)/net/connection.cpp \
 	$(SRC_DIR)/net/event_loop.cpp \
 	$(SRC_DIR)/net/protocol.cpp \
-	$(SRC_DIR)/cache/cache_store.cpp
+	$(SRC_DIR)/cache/cache_store.cpp \
+	$(SRC_DIR)/protocol/command.cpp \
+	$(SRC_DIR)/protocol/executor.cpp
 
 # ===============================
 # Objects
