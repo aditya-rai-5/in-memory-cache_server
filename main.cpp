@@ -2,8 +2,11 @@
 #include "include/common/logger.h"
 #include "include/net/acceptor.h"
 #include "include/net/event_loop.h"
+#include "include/cache/cache_store.h"
 
 #include <filesystem>
+#include <thread>
+#include <chrono>
 
 int main()
 {
@@ -27,6 +30,17 @@ int main()
                 max_files);
 
     LOG_INFO("Server starting on port " + std::to_string(port));
+
+    // ── Start Active Expiry (Background TTL Sweep) ──────────────────────
+    std::thread evictor_thread([]() {
+        LOG_INFO("Active expiry background thread started");
+        auto &cs = cache::CacheStore::instance();
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            cs.purge_expired();
+        }
+    });
+    evictor_thread.detach(); // Let it run independently
 
     // ── Start networking ────────────────────────────────────────────────
     Acceptor  acceptor(port);
