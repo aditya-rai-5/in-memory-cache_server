@@ -1,9 +1,11 @@
 #include "../include/net/event_loop.h"
+#include "../include/common/logger.h"
 
 #include <poll.h>
 #include <unistd.h>
 #include <vector>
 #include <cerrno>
+#include <string>
 
 EventLoop::EventLoop(Acceptor &a) : acceptor_(a) {}
 
@@ -24,14 +26,17 @@ void EventLoop::accept_new()
           {
                if (errno == EAGAIN || errno == EINTR)
                     break;
+               LOG_ERROR("accept4 error: " + std::to_string(errno));
                return;
           }
           conns_[fd] = new Connection(fd);
+          LOG_INFO("New connection accepted: fd " + std::to_string(fd));
      }
 }
 
 void EventLoop::run()
 {
+     LOG_INFO("EventLoop started running");
      while (true)
      {
           std::vector<pollfd> fds;
@@ -69,6 +74,7 @@ void EventLoop::run()
 
                     if (!ok)
                     {
+                         LOG_INFO("Connection closed: fd " + std::to_string(c->fd()));
                          delete c;
                          conns_.erase(it);
                     }

@@ -15,7 +15,8 @@ public:
 
   void set(const std::string &key, const std::string &value);
 
-  void set_ex(const std::string &key, const std::string &value, std::chrono::seconds ttl);
+  void set_ex(const std::string &key, const std::string &value,
+      std::chrono::seconds ttl);
 
   std::optional<std::string> get(const std::string &key);
 
@@ -49,4 +50,4 @@ private:
   mutable std::mutex mutex_;
 };
 
-}
+} // namespace cache

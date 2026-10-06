@@ -1,6 +1,7 @@
 #include "../include/net/connection.h"
 #include "../include/protocol/command.h"
 #include "../include/protocol/executor.h"
+#include "../include/common/logger.h"
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -43,6 +44,7 @@ void Connection::process_frames() {
       break;
 
     if (res == ParseResult::ProtocolError) {
+      LOG_ERROR("Protocol error on fd " + std::to_string(fd_));
       ::close(fd_);
       fd_ = -1;
       break;

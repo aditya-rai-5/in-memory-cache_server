@@ -7,7 +7,7 @@
 #include <iostream>
 #include <thread>
 
-#include "include/cache/cache_store.h"
+#include "cache/cache_store.h"
 
 using namespace cache;
 

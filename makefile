@@ -98,7 +98,7 @@ run: all
 # ===============================
 
 test:
-	$(CXX) $(CXXFLAGS) $(INCLUDES) test_cache.cpp $(SRC_DIR)/cache/cache_store.cpp -o bin/test_cache
+	$(CXX) $(CXXFLAGS) $(INCLUDES) test/test_cache.cpp $(SRC_DIR)/cache/cache_store.cpp -o bin/test_cache
 	./bin/test_cache
 
 .PHONY: all clean re run dirs test
