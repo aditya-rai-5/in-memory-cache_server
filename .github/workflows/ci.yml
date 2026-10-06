@@ -1,0 +1,35 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential python3
+
+    - name: Build Project
+      run: make re
+
+    - name: Run C++ Cache Unit Tests
+      run: make test
+
+    - name: Start Cache Server in Background
+      run: |
+        echo "server.port=6379" > server.conf
+        ./bin/redis_like &
+        sleep 1 # Wait for server to bind to port
+
+    - name: Run Python Integration Tests
+      run: python3 test/test_server.py
