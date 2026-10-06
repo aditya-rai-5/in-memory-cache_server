@@ -24,7 +24,7 @@ int main() {
   logger.init(log_file, logging::LogLevel::DEBUG,
               static_cast<std::size_t>(max_size), max_files);
 
-  LOG_INFO("Server starting on port " + std::to_string(port));
+    LOG_INFO("Server starting on port " + std::to_string(port));
 
   // ── Start Active Expiry (Background TTL Sweep) ──────────────────────
   std::thread evictor_thread([]() {
