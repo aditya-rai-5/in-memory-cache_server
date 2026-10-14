@@ -2,6 +2,8 @@
 #include "../../include/cache/cache_store.h"
 #include "../../include/common/logger.h"
 
+#include <charconv>
+#include <cctype>
 #include <chrono>
 #include <stdexcept>
 #include <string>
@@ -16,6 +18,8 @@ std::string execute_command(const Command &cmd) {
 
   switch (cmd.type) {
   case CommandType::PING:
+    if (!cmd.args.empty())
+      return err("wrong number of arguments for 'PING' command");
     LOG_DEBUG("Executed PING");
     return "PONG";
 
@@ -29,7 +33,7 @@ std::string execute_command(const Command &cmd) {
   }
 
   case CommandType::SET: {
-    if (cmd.args.size() < 2)
+    if (cmd.args.size() != 2 && cmd.args.size() != 4)
       return err("wrong number of arguments for 'SET' command");
 
     const std::string &key = cmd.args[0];
@@ -37,23 +41,27 @@ std::string execute_command(const Command &cmd) {
 
     LOG_DEBUG("Executed SET " + key);
 
-    if (cmd.args.size() >= 4) {
+    if (cmd.args.size() == 4) {
       std::string opt = cmd.args[2];
       for (auto &c : opt)
         c = (char)std::toupper((unsigned char)c);
 
       if (opt == "EX") {
-        long seconds = 0;
-        try {
-          seconds = std::stol(cmd.args[3]);
-        } catch (...) {
+        std::chrono::seconds::rep seconds = 0;
+        const std::string &input = cmd.args[3];
+        const char *end = input.data() + input.size();
+        auto result = std::from_chars(input.data(), end, seconds);
+        if (result.ec != std::errc{} || result.ptr != end)
           return err("value is not an integer or out of range");
-        }
 
         if (seconds <= 0)
           return err("invalid expire time in 'SET' command");
 
-        cs.set_ex(key, value, std::chrono::seconds(seconds));
+        try {
+          cs.set_ex(key, value, std::chrono::seconds(seconds));
+        } catch (const std::out_of_range &) {
+          return err("value is not an integer or out of range");
+        }
         return "OK";
       }
       return err("syntax error");

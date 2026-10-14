@@ -1,5 +1,7 @@
 #include "../../include/cache/cache_store.h"
 
+#include <stdexcept>
+
 namespace cache {
 
 CacheStore &CacheStore::instance() {
@@ -21,7 +23,21 @@ void CacheStore::set(const std::string &key, const std::string &value) {
 void CacheStore::set_ex(const std::string &key, const std::string &value,
                         std::chrono::seconds ttl) {
   std::lock_guard<std::mutex> lock(mutex_);
-  store_[key] = Entry{value, Clock::now() + ttl};
+  if (ttl <= std::chrono::seconds::zero())
+    throw std::invalid_argument("expiry must be positive");
+
+  const auto max_ttl =
+      std::chrono::duration_cast<std::chrono::seconds>(Clock::duration::max());
+  if (ttl > max_ttl)
+    throw std::out_of_range("expiry duration is out of range");
+
+  const auto duration = std::chrono::duration_cast<Clock::duration>(ttl);
+  const auto now = Clock::now();
+  // Subtract a validated duration from max instead of overflowing now + duration.
+  if (now > TimePoint::max() - duration)
+    throw std::out_of_range("expiry timestamp is out of range");
+
+  store_[key] = Entry{value, now + duration};
 }
 
 std::optional<std::string> CacheStore::get(const std::string &key) {

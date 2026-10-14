@@ -33,6 +33,15 @@ The server currently supports the following commands (case-insensitive):
 | **EXISTS** | `EXISTS <key>` | Returns `1` if the key exists, `0` otherwise. |
 | **TTL** | `TTL <key>` | Returns the remaining time to live in seconds. Returns `-1` if no expiry, `-2` if key doesn't exist. |
 
+Command argument counts are strict: `PING` takes no arguments, `SET` takes
+exactly a key and value or a key, value, `EX`, and seconds, and the other
+commands each take exactly one key. Missing or extra arguments return `ERR`.
+Expiry must be a positive base-10 integer written with digits only (leading
+zeros are allowed). Suffixes such as `5abc`, decimal values, and a leading `+`
+are rejected. Expiries that cannot fit the steady clock's duration or resulting
+timestamp are also rejected. A rejected `SET` preserves the existing value and
+expiry.
+
 ## 🛠️ Build and Run
 
 ### Prerequisites
@@ -67,7 +76,7 @@ log.max_files = 3
 
 The repository includes both C++ unit tests for the caching engine and a full Python integration suite for end-to-end network testing.
 
-**1. Run C++ Unit Tests (Cache Engine):**
+**1. Run C++ Unit Tests (Cache Engine and Command Validation):**
 ```bash
 make test
 ```

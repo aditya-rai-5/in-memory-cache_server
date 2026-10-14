@@ -105,6 +105,37 @@ def run_tests(s: socket.socket):
     check("SET EX negative", send_command(s, "SET k v EX -5"), "ERR invalid expire time in 'SET' command")
     check("UNKNOWN command", send_command(s, "BLAH xyz"), "ERR unknown command")
 
+    print("\n=== Strict command syntax ===")
+    check("PING rejects arguments", send_command(s, "PING extra"),
+          "ERR wrong number of arguments for 'PING' command")
+    check("SET validation fixture", send_command(s, "SET strict original EX 600"), "OK")
+    original_ttl = int(send_command(s, "TTL strict"))
+    validation_started = time.monotonic()
+    invalid_sets = [
+        ("SET strict changed EX", "ERR wrong number of arguments for 'SET' command"),
+        ("SET strict changed extra", "ERR wrong number of arguments for 'SET' command"),
+        ("SET strict changed EX 5 extra", "ERR wrong number of arguments for 'SET' command"),
+        ("SET strict changed PX 5", "ERR syntax error"),
+        ("SET strict changed EX 5abc", "ERR value is not an integer or out of range"),
+        ("SET strict changed EX 5.0", "ERR value is not an integer or out of range"),
+        ("SET strict changed EX +5", "ERR value is not an integer or out of range"),
+        ("SET strict changed EX 9223372036854775808", "ERR value is not an integer or out of range"),
+        ("SET strict changed EX 9223372036854775807", "ERR value is not an integer or out of range"),
+        ("SET strict changed EX 0", "ERR invalid expire time in 'SET' command"),
+    ]
+    for command, expected in invalid_sets:
+        check(command, send_command(s, command), expected)
+        check("rejected SET preserves value", send_command(s, "GET strict"), "original")
+    elapsed = int(time.monotonic() - validation_started)
+    current_ttl = int(send_command(s, "TTL strict"))
+    check("rejected SET preserves TTL",
+          str(original_ttl - elapsed - 1 <= current_ttl <= original_ttl), "True")
+    check("mixed-case EX", send_command(s, "sEt strict updated eX 600"), "OK")
+    check("valid SET after rejected commands", send_command(s, "GET strict"), "updated")
+    check("plain SET removes expiry", send_command(s, "SET strict permanent"), "OK")
+    check("TTL removed", send_command(s, "TTL strict"), "-1")
+    check("DEL validation fixture", send_command(s, "DEL strict"), "1")
+
     print("\n=== Case insensitivity ===")
     send_command(s, "set mykey myval")
     check("set (lowercase)", send_command(s, "get mykey"), "myval")
