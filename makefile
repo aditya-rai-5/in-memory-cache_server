@@ -102,5 +102,7 @@ test: dirs
 	./bin/test_cache
 	$(CXX) $(CXXFLAGS) $(INCLUDES) test/test_commands.cpp $(SRC_DIR)/protocol/command.cpp $(SRC_DIR)/protocol/executor.cpp $(SRC_DIR)/cache/cache_store.cpp $(SRC_DIR)/common/logger.cpp -o bin/test_commands
 	./bin/test_commands
+	$(CXX) $(CXXFLAGS) $(INCLUDES) test/test_network.cpp $(SRC_DIR)/net/event_loop.cpp $(SRC_DIR)/net/accepter.cpp $(SRC_DIR)/net/socket.cpp $(SRC_DIR)/net/connection.cpp $(SRC_DIR)/net/buffer.cpp $(SRC_DIR)/net/protocol.cpp $(SRC_DIR)/protocol/command.cpp $(SRC_DIR)/protocol/executor.cpp $(SRC_DIR)/cache/cache_store.cpp $(SRC_DIR)/common/logger.cpp -Wl,--wrap=epoll_create1 -Wl,--wrap=epoll_ctl -Wl,--wrap=epoll_wait -Wl,--wrap=accept4 -o bin/test_network
+	./bin/test_network
 
 .PHONY: all clean re run dirs test

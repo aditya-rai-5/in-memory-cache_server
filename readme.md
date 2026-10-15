@@ -5,6 +5,7 @@ A high-performance, single-threaded, `epoll`-based in-memory caching server writ
 ## 🚀 Features
 
 * **High Performance Networking**: Utilizes Linux `epoll` for highly concurrent, non-blocking I/O multiplexing.
+* **Socket Failure Handling**: Checks epoll registration failures, closes clients on socket errors and hangups, drains replies after a write half-close, and suppresses SIGPIPE per socket send. Fatal epoll creation/wait or listener failures stop the server.
 * **Custom Wire Protocol**: Implements a length-prefixed TCP binary framing protocol to prevent TCP stream fragmentation issues.
 * **Thread-Safe Storage**: Core caching engine is protected for concurrent access, allowing future expansion into multi-threaded executors.
 * **Active & Lazy Expiry**: Keys with a TTL are lazily deleted on access, and a background sweeper thread runs asynchronously to actively evict expired keys to prevent memory leaks.
@@ -74,9 +75,9 @@ log.max_files = 3
 
 ## 🧪 Testing
 
-The repository includes both C++ unit tests for the caching engine and a full Python integration suite for end-to-end network testing.
+The repository includes C++ tests for the cache, command validation, and network failure handling, plus Python integration tests against a running server. Network tests use real local sockets and deterministic syscall fault injection, including a subprocess with default SIGPIPE handling.
 
-**1. Run C++ Unit Tests (Cache Engine and Command Validation):**
+**1. Run C++ Tests (Cache, Command Validation, and Network Failures):**
 ```bash
 make test
 ```

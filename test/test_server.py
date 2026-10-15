@@ -21,7 +21,11 @@ def send_command(sock: socket.socket, cmd: str) -> str:
     """Send a length-prefixed command and read the length-prefixed response."""
     payload = cmd.encode()
     sock.sendall(struct.pack(">I", len(payload)) + payload)
+    return receive_response(sock)
 
+
+def receive_response(sock: socket.socket) -> str:
+    """Read one framed reply, including after a client half-closes its writes."""
     raw_len = b""
     while len(raw_len) < 4:
         chunk = sock.recv(4 - len(raw_len))
@@ -143,10 +147,55 @@ def run_tests(s: socket.socket):
     check("DEL (uppercase)", send_command(s, "DEL mykey"), "1")
 
 
+def run_network_tests(control: socket.socket):
+    address = control.getpeername()
+    print("\n=== Socket lifecycle and server survival ===")
+
+    with socket.create_connection(address, timeout=5) as peer:
+        packet = struct.pack(">I", 4) + b"PING"
+        peer.sendall(packet + packet)
+        peer.shutdown(socket.SHUT_WR)
+        check("half-close preserves first reply", receive_response(peer), "PONG")
+        check("half-close preserves second reply", receive_response(peer), "PONG")
+        check("server closes after replies drain", repr(peer.recv(1)), "b''")
+
+    with socket.create_connection(address, timeout=5) as peer:
+        peer.sendall(struct.pack(">I", 4) + b"PI")
+        peer.shutdown(socket.SHUT_WR)
+        check("incomplete frame at EOF closes connection", repr(peer.recv(1)), "b''")
+    check("server alive after incomplete frame", send_command(control, "PING"), "PONG")
+
+    with socket.create_connection(address, timeout=5) as peer:
+        peer.sendall(struct.pack(">I", 1024 * 1024 + 1))
+        check("oversized frame closes connection", repr(peer.recv(1)), "b''")
+    check("server alive after protocol error", send_command(control, "PING"), "PONG")
+
+    value = "x" * (256 * 1024)
+    check("reset test fixture", send_command(control, "SET network_large " + value), "OK")
+    request = b"GET network_large"
+    packet = struct.pack(">I", len(request)) + request
+    # Each peer requests more reply data than a typical socket send buffer,
+    # then resets without reading. This exercises both read and write failures.
+    for _ in range(5):
+        with socket.create_connection(address, timeout=5) as peer:
+            peer.sendall(packet * 16)
+            peer.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+        check("server survives reset with pending replies", send_command(control, "PING"), "PONG")
+    check("remove reset test fixture", send_command(control, "DEL network_large"), "1")
+
+    for _ in range(20):
+        with socket.create_connection(address, timeout=5):
+            pass
+    with socket.create_connection(address, timeout=5) as peer:
+        check("new client works after repeated disconnects", send_command(peer, "PING"), "PONG")
+    check("existing client survives other disconnects", send_command(control, "PING"), "PONG")
+
+
 if __name__ == "__main__":
     try:
         with socket.create_connection((HOST, PORT), timeout=5) as s:
             run_tests(s)
+            run_network_tests(s)
     except ConnectionRefusedError:
         print(f"\nERROR: Could not connect to {HOST}:{PORT}")
         print("Make sure the server is running:  ./bin/redis_like")

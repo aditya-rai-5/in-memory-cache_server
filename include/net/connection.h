@@ -14,11 +14,13 @@ public:
      bool handle_write();
 
      bool want_write() const noexcept;
+     bool read_closed() const noexcept;
 
 private:
-     void process_frames();
+     bool process_frames();
 
      int fd_;
+     bool read_closed_ = false;
      Buffer read_buf_;
      Buffer write_buf_;
      Protocol protocol_;
