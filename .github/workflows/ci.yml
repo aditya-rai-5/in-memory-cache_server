@@ -22,7 +22,7 @@ jobs:
     - name: Build Project
       run: make re
 
-    - name: Run C++ Cache Unit Tests
+    - name: Run C++ and Configuration Startup Tests
       run: make test
 
     - name: Start Cache Server in Background

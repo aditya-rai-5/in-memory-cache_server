@@ -60,13 +60,32 @@ make re
 This will generate the executable inside the `bin/` directory.
 
 ### Configuration
-The server reads from `server.conf` in the root directory. Example configuration:
+The server requires a readable `server.conf` in its working directory. Omitted
+settings use the defaults shown below:
 ```ini
 server.port = 6379
+log.level = DEBUG
 log.file = logs/server.log
 log.max_size = 10485760
 log.max_files = 3
 ```
+
+* `server.port`: decimal integer from 1 through 65535; zero is rejected.
+* `log.level`: minimum emitted severity, exactly `TRACE`, `DEBUG`, `INFO`,
+  `WARN`, `ERROR`, or `FATAL`.
+* `log.file`: nonempty filename or path; parent directories are created if needed.
+* `log.max_size`: rotation threshold in bytes, from 1 through 2147483647.
+* `log.max_files`: retained numbered backups, from 1 through 1000. The upper bound
+  limits filesystem work during rotation.
+
+Numeric values must be complete decimal integers: leading zeros are allowed;
+signs, suffixes, fractions, and overflow are rejected. Blank lines and full-line
+`#` comments are supported; inline comments and quoted values are not interpreted.
+Unknown keys, duplicate keys, empty values, and malformed lines stop startup with
+a file/line/setting diagnostic on stderr and a nonzero exit status. Invalid
+configuration is rejected before logs or sockets are created. The unused
+`server.workers` setting has been removed: delete it from older configurations;
+the network event loop remains single-threaded.
 
 ### Running the Server
 ```bash
@@ -75,11 +94,20 @@ log.max_files = 3
 
 ## 🧪 Testing
 
-The repository includes C++ tests for the cache, command validation, and network failure handling, plus Python integration tests against a running server. Network tests use real local sockets and deterministic syscall fault injection, including a subprocess with default SIGPIPE handling.
+The repository includes C++ tests for configuration, logger thresholds, the cache,
+command validation, and network failure handling. Configuration startup tests
+launch isolated server processes with temporary files and ports; the command
+integration suite uses an already running server. Network tests use real local sockets and deterministic syscall fault injection, including a subprocess with default SIGPIPE handling.
 
-**1. Run C++ Tests (Cache, Command Validation, and Network Failures):**
+**1. Run C++ Tests and Self-Contained Configuration Startup Tests:**
 ```bash
 make test
+```
+
+To run just configuration, logging, and startup regression tests (including a
+server build):
+```bash
+make test-config
 ```
 
 **2. Run Python Integration Suite:**

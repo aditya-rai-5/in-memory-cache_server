@@ -1,31 +1,33 @@
 #pragma once
 
+#include "log_level.h"
+
+#include <cstddef>
 #include <string>
-#include <unordered_map>
 
-namespace config
-{
-     class Config
-     {
-     public:
-          static Config &instance();
-          bool load(const std::string &path);
+namespace config {
 
-          std::string get_string(const std::string &key,
-                                 const std::string &def = "") const;
-
-          int get_int(const std::string &key, int def = 0)
-              const;
-
-          bool get_bool(const std::string &key, bool def = false)
-              const;
-
-     private:
-          Config() = default;
-          Config(const Config &) = delete;
-          Config &operator=(const Config &) = delete;
-
-     private:
-          std::unordered_map<std::string, std::string> data_;
-     };
+struct Settings {
+  int port = 6379;
+  logging::LogLevel log_level = logging::LogLevel::DEBUG;
+  std::string log_file = "logs/server.log";
+  std::size_t log_max_size = 10 * 1024 * 1024;
+  int log_max_files = 3;
 };
+
+class Config {
+public:
+  static Config &instance();
+
+  void load(const std::string &path);
+  const Settings &settings() const noexcept { return settings_; }
+
+private:
+  Config() = default;
+  Config(const Config &) = delete;
+  Config &operator=(const Config &) = delete;
+
+  Settings settings_;
+};
+
+}
