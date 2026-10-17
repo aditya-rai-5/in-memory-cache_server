@@ -9,6 +9,7 @@ namespace config {
 
 struct Settings {
   int port = 6379;
+  std::size_t cache_max_keys = 20000;
   logging::LogLevel log_level = logging::LogLevel::DEBUG;
   std::string log_file = "logs/server.log";
   std::size_t log_max_size = 10 * 1024 * 1024;

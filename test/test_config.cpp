@@ -48,7 +48,7 @@ struct Workspace {
 };
 
 static bool same_settings(const config::Settings &a, const config::Settings &b) {
-  return a.port == b.port && a.log_level == b.log_level &&
+  return a.port == b.port && a.cache_max_keys == b.cache_max_keys && a.log_level == b.log_level &&
          a.log_file == b.log_file && a.log_max_size == b.log_max_size &&
          a.log_max_files == b.log_max_files;
 }
@@ -79,16 +79,17 @@ static void test_defaults_and_reload(const Workspace &workspace) {
   cfg.load(workspace.path());
   const auto &defaults = cfg.settings();
   check("empty file uses documented defaults",
-        defaults.port == 6379 && defaults.log_level == logging::LogLevel::DEBUG &&
+        defaults.port == 6379 && defaults.cache_max_keys == 20000 && defaults.log_level == logging::LogLevel::DEBUG &&
         defaults.log_file == "logs/server.log" &&
         defaults.log_max_size == 10485760 && defaults.log_max_files == 3);
 
   workspace.write(" # comment\r\n\t\r\n server.port = 12345\r\n"
                   "log.level = WARN\r\nlog.file = custom logs/server=one.log\r\n"
-                  "log.max_size = 2048\r\n log.max_files = 7");
+                  "log.max_size = 2048\r\ncache.max_keys = 17\r\n log.max_files = 7");
   cfg.load(workspace.path());
   const auto &settings = cfg.settings();
   check("whitespace, CRLF, and final line without newline", settings.port == 12345);
+  check("configured cache limit", settings.cache_max_keys == 17);
   check("configured log level", settings.log_level == logging::LogLevel::WARN);
   check("log filename may contain spaces and equals",
         settings.log_file == "custom logs/server=one.log");
@@ -106,23 +107,26 @@ static void test_numeric_settings(const Workspace &workspace) {
   auto &cfg = config::Config::instance();
   struct NumericSetting {
     std::string key;
-    int maximum;
+    std::size_t maximum;
   };
   for (const auto &setting : std::vector<NumericSetting>{
            {"server.port", 65535},
            {"log.max_size", std::numeric_limits<int>::max()},
-           {"log.max_files", 1000}}) {
+           {"log.max_files", 1000},
+           {"cache.max_keys", std::numeric_limits<std::size_t>::max()}}) {
     for (const auto &value : {std::string("1"), std::string("00042"),
                               std::to_string(setting.maximum)}) {
       workspace.write(setting.key + "=" + value + "\n");
       cfg.load(workspace.path());
       const auto &s = cfg.settings();
       const auto actual = setting.key == "server.port" ? s.port :
-          setting.key == "log.max_files" ? s.log_max_files : s.log_max_size;
+          setting.key == "log.max_files" ? s.log_max_files :
+          setting.key == "cache.max_keys" ? s.cache_max_keys : s.log_max_size;
       check(setting.key + " accepts " + value,
-            actual == static_cast<std::size_t>(std::stoi(value)));
+            actual == static_cast<std::size_t>(std::stoull(value)));
     }
-    const auto above_max = std::to_string(static_cast<long long>(setting.maximum) + 1);
+    const auto above_max = (setting.maximum == std::numeric_limits<std::size_t>::max()
+        ? std::to_string(setting.maximum) + "0" : std::to_string(setting.maximum + 1));
     const std::string invalid_values[] = {
         "0", "-1", "+1", "-0", "1junk", "1.5", "0x10", "1e3", "1 2",
         "true", "999999999999999999999999999999", "-999999999999999999999999999999",
@@ -161,7 +165,7 @@ static void test_syntax_and_io(const Workspace &workspace) {
     expect_error(test.reason, workspace.path(), {":1:", test.reason});
   }
   for (const auto &key : {"server.port", "log.level", "log.file",
-                           "log.max_size", "log.max_files"}) {
+                           "log.max_size", "log.max_files", "cache.max_keys"}) {
     workspace.write(std::string(key) + "=1\n" + key + "=2\n");
     if (std::string(key) == "log.level")
       workspace.write("log.level=INFO\nlog.level=ERROR\n");

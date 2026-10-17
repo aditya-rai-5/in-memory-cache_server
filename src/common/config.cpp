@@ -20,9 +20,10 @@ std::string trim(std::string s) {
   return s;
 }
 
-int parse_number(const std::string &value, int maximum,
+template <typename Number>
+Number parse_number(const std::string &value, Number maximum,
                  const std::string &context) {
-  int result = 0;
+  Number result = 0;
   const auto parsed =
       std::from_chars(value.data(), value.data() + value.size(), result);
   if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size() ||
@@ -85,7 +86,7 @@ void Config::load(const std::string &path) {
                                "unsupported setting; remove it because "
                                "the server uses a single event-loop thread");
     if (key != "server.port" && key != "log.level" && key != "log.file" &&
-        key != "log.max_size" && key != "log.max_files")
+        key != "log.max_size" && key != "log.max_files" && key != "cache.max_keys")
       throw std::runtime_error(context + "unknown setting");
     if (!seen.insert(key).second)
       throw std::runtime_error(context + "duplicate setting");
@@ -94,6 +95,9 @@ void Config::load(const std::string &path) {
 
     if (key == "server.port")
       candidate.port = parse_number(value, 65535, context);
+    else if (key == "cache.max_keys")
+      candidate.cache_max_keys =
+          parse_number(value, std::numeric_limits<std::size_t>::max(), context);
     else if (key == "log.max_size")
       candidate.log_max_size =
           parse_number(value, std::numeric_limits<int>::max(), context);
