@@ -22,6 +22,7 @@ int main() {
 
   try {
     const auto &settings = cfg.settings();
+    cache::CacheStore::instance().set_max_keys(settings.cache_max_keys);
     const auto log_directory = std::filesystem::path(settings.log_file).parent_path();
     if (!log_directory.empty())
       std::filesystem::create_directories(log_directory);
