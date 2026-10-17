@@ -2,6 +2,7 @@
 """Self-contained configuration/startup regression tests; build the server first."""
 
 from pathlib import Path
+import json
 import socket
 import struct
 import subprocess
@@ -161,7 +162,15 @@ class ConfigurationStartupTests(unittest.TestCase):
                             self.assertIn(str(port), messages)
                         else:
                             self.assertEqual(messages, "")
-                        self.assertEqual(Path(str(log_path) + ".1").read_text(), "original log\n")
+                        archived = Path(str(log_path) + ".1").read_text()
+                        if level == "INFO":
+                            # Buffered INFO records now count toward rotation,
+                            # so the original seed has already aged out.
+                            self.assertTrue(archived)
+                            for record in archived.splitlines():
+                                self.assertIn(json.loads(record)["level"], ("INFO", "ERROR"))
+                        else:
+                            self.assertEqual(archived, "original log\n")
                         older_backup = Path(str(log_path) + ".2")
                         self.assertEqual(older_backup.exists(), backups == 2)
                         if backups == 2:

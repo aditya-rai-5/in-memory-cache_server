@@ -102,7 +102,11 @@ test-config: all
 	./bin/test_config
 	python3 test/test_config_startup.py
 
-test: dirs test-config
+test-logger: dirs
+	$(CXX) $(CXXFLAGS) $(INCLUDES) test/test_logger.cpp $(SRC_DIR)/common/logger.cpp -Wl,--wrap=open -Wl,--wrap=close -Wl,--wrap=fstat -Wl,--wrap=write -Wl,--wrap=fsync -ldl -o bin/test_logger
+	python3 test/test_logger.py
+
+test: dirs test-config test-logger
 	$(CXX) $(CXXFLAGS) $(INCLUDES) test/test_cache.cpp $(SRC_DIR)/cache/cache_store.cpp -o bin/test_cache
 	./bin/test_cache
 	$(CXX) $(CXXFLAGS) $(INCLUDES) test/test_commands.cpp $(SRC_DIR)/protocol/command.cpp $(SRC_DIR)/protocol/executor.cpp $(SRC_DIR)/cache/cache_store.cpp $(SRC_DIR)/common/logger.cpp -o bin/test_commands
@@ -110,4 +114,4 @@ test: dirs test-config
 	$(CXX) $(CXXFLAGS) $(INCLUDES) test/test_network.cpp $(SRC_DIR)/net/event_loop.cpp $(SRC_DIR)/net/accepter.cpp $(SRC_DIR)/net/socket.cpp $(SRC_DIR)/net/connection.cpp $(SRC_DIR)/net/buffer.cpp $(SRC_DIR)/net/protocol.cpp $(SRC_DIR)/protocol/command.cpp $(SRC_DIR)/protocol/executor.cpp $(SRC_DIR)/cache/cache_store.cpp $(SRC_DIR)/common/logger.cpp -Wl,--wrap=epoll_create1 -Wl,--wrap=epoll_ctl -Wl,--wrap=epoll_wait -Wl,--wrap=accept4 -o bin/test_network
 	./bin/test_network
 
-.PHONY: all clean re run dirs test test-config
+.PHONY: all clean re run dirs test test-config test-logger

@@ -5,6 +5,10 @@ Run the server first: ./bin/redis_like
 Then run this script: python3 test_server.py
 """
 
+from pathlib import Path
+import subprocess
+import tempfile
+
 import socket
 import struct
 import sys
@@ -191,11 +195,69 @@ def run_network_tests(control: socket.socket):
     check("existing client survives other disconnects", send_command(control, "PING"), "PONG")
 
 
+def run_lru_tests():
+    """Use an isolated, small configured limit without touching the user's server."""
+    print("\n=== Configured LRU eviction (max_keys=3) ===")
+    binary = Path(__file__).resolve().parents[1] / "bin" / "redis_like"
+    with tempfile.TemporaryDirectory() as root:
+        with socket.socket() as reservation:
+            reservation.bind((HOST, 0))
+            port = reservation.getsockname()[1]
+        (Path(root) / "server.conf").write_text(
+            f"server.port={port}\ncache.max_keys=3\nlog.level=ERROR\n"
+        )
+        with tempfile.TemporaryFile() as errors:
+            process = subprocess.Popen(
+                [str(binary)], cwd=root, stdout=subprocess.DEVNULL, stderr=errors
+            )
+            try:
+                deadline = time.monotonic() + 5
+                while True:
+                    if process.poll() is not None:
+                        errors.seek(0)
+                        raise RuntimeError(errors.read().decode())
+                    try:
+                        client = socket.create_connection((HOST, port), timeout=1)
+                        break
+                    except ConnectionRefusedError:
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError("LRU test server did not start")
+                        time.sleep(0.02)
+                with client:
+                    for key in ("a", "b", "c"):
+                        check(f"fill {key}", send_command(client, f"SET {key} {key}"), "OK")
+                    check("invalid SET at capacity",
+                          send_command(client, "SET new rejected EX 9223372036854775807"),
+                          "ERR value is not an integer or out of range")
+                    check("read refreshes a", send_command(client, "GET a"), "a")
+                    check("insert beyond limit", send_command(client, "SET d d"), "OK")
+                    check("least recently used b evicted", send_command(client, "GET b"), "(nil)")
+                    check("recently read a survives", send_command(client, "GET a"), "a")
+                    check("overwrite at capacity", send_command(client, "SET c updated EX 60"), "OK")
+                    check("overwrite preserves d", send_command(client, "GET d"), "d")
+                    check("insert with expiry", send_command(client, "SET e e EX 60"), "OK")
+                    check("next oldest a evicted", send_command(client, "GET a"), "(nil)")
+                    check("updated c survives", send_command(client, "GET c"), "updated")
+                    check("expiry insert survives", send_command(client, "GET e"), "e")
+                    check("delete frees capacity", send_command(client, "DEL c"), "1")
+                    check("refill capacity", send_command(client, "SET f f"), "OK")
+                    check("d survives refill", send_command(client, "GET d"), "d")
+                    check("e survives refill", send_command(client, "GET e"), "e")
+            finally:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+
+
 if __name__ == "__main__":
     try:
         with socket.create_connection((HOST, PORT), timeout=5) as s:
             run_tests(s)
             run_network_tests(s)
+        run_lru_tests()
     except ConnectionRefusedError:
         print(f"\nERROR: Could not connect to {HOST}:{PORT}")
         print("Make sure the server is running:  ./bin/redis_like")

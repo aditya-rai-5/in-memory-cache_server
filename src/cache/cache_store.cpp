@@ -15,9 +15,49 @@ bool CacheStore::is_expired(const Entry &e) noexcept {
   return Clock::now() >= *e.expires_at;
 }
 
+void CacheStore::set_max_keys(std::size_t max_keys) {
+  if (max_keys == 0)
+    throw std::invalid_argument("max_keys must be positive");
+  std::lock_guard<std::mutex> lock(mutex_);
+  max_keys_ = max_keys;
+  while (store_.size() > max_keys_)
+    erase(store_.find(lru_.back()));
+}
+
+void CacheStore::touch(Entry &entry) {
+  lru_.splice(lru_.begin(), lru_, entry.lru_position);
+}
+
+CacheStore::Store::iterator CacheStore::erase(Store::iterator it) {
+  lru_.erase(it->second.lru_position);
+  return store_.erase(it);
+}
+
+void CacheStore::write(const std::string &key, const std::string &value,
+                       std::optional<TimePoint> expires_at) {
+  auto it = store_.find(key);
+  if (it != store_.end()) {
+    it->second.value = value;
+    it->second.expires_at = expires_at;
+    touch(it->second);
+    return;
+  }
+
+  lru_.push_front(key);
+  try {
+    store_.emplace(key, Entry{value, expires_at, lru_.begin()});
+  } catch (...) {
+    lru_.pop_front();
+    throw;
+  }
+  // Commit the new entry before eviction so allocation failure preserves data.
+  if (store_.size() > max_keys_)
+    erase(store_.find(lru_.back()));
+}
+
 void CacheStore::set(const std::string &key, const std::string &value) {
   std::lock_guard<std::mutex> lock(mutex_);
-  store_[key] = Entry{value, std::nullopt};
+  write(key, value, std::nullopt);
 }
 
 void CacheStore::set_ex(const std::string &key, const std::string &value,
@@ -37,7 +77,7 @@ void CacheStore::set_ex(const std::string &key, const std::string &value,
   if (now > TimePoint::max() - duration)
     throw std::out_of_range("expiry timestamp is out of range");
 
-  store_[key] = Entry{value, now + duration};
+  write(key, value, now + duration);
 }
 
 std::optional<std::string> CacheStore::get(const std::string &key) {
@@ -48,10 +88,11 @@ std::optional<std::string> CacheStore::get(const std::string &key) {
     return std::nullopt;
 
   if (is_expired(it->second)) {
-    store_.erase(it);
+    erase(it);
     return std::nullopt;
   }
 
+  touch(it->second);
   return it->second.value;
 }
 
@@ -63,10 +104,11 @@ bool CacheStore::exists(const std::string &key) {
     return false;
 
   if (is_expired(it->second)) {
-    store_.erase(it);
+    erase(it);
     return false;
   }
 
+  touch(it->second);
   return true;
 }
 
@@ -78,10 +120,11 @@ int64_t CacheStore::ttl(const std::string &key) {
     return -2;
 
   if (is_expired(it->second)) {
-    store_.erase(it);
+    erase(it);
     return -2;
   }
 
+  touch(it->second);
   if (!it->second.expires_at.has_value())
     return -1;
 
@@ -99,11 +142,11 @@ int CacheStore::del(const std::string &key) {
     return 0;
 
   if (is_expired(it->second)) {
-    store_.erase(it);
+    erase(it);
     return 0;
   }
 
-  store_.erase(it);
+  erase(it);
   return 1;
 }
 
@@ -112,7 +155,7 @@ void CacheStore::purge_expired() {
 
   for (auto it = store_.begin(); it != store_.end();) {
     if (is_expired(it->second))
-      it = store_.erase(it);
+      it = erase(it);
     else
       ++it;
   }
